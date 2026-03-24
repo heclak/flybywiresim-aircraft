@@ -35,7 +35,7 @@ class ThrottleAxisMapping {
 
   void setInFlight();
   void setOnGround();
-  void setHasReverser(bool);
+  void setHasReverser(bool value);
 
   double getValue();
   double getTLA();
