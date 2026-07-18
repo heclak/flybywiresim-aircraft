@@ -165,6 +165,14 @@ span.Amber {
   line-height: 38px;
 }
 
+.atc-mailbox-text-sent {
+  color: $display-background;
+}
+
+.atc-mailbox-text-in {
+  color: $display-white;
+}
+
 .atc-mailbox-msg-status {
   display: flex;
   flex-direction: row;

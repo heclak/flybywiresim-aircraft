@@ -13,7 +13,7 @@ import {
 } from '@microsoft/msfs-sdk';
 import { CdsDisplayUnit, DisplayUnitID } from '../MsfsAvionicsCommon/CdsDisplayUnit';
 import { PermanentData } from './StatusArea';
-import { AtcMailbox } from './AtcMailbox';
+import { AtcMailbox } from './AtcMailbox/AtcMailbox';
 import { DestroyableComponent } from '@flybywiresim/msfs-avionics-common';
 import { SdPages } from '@shared/EcamSystemPages';
 
