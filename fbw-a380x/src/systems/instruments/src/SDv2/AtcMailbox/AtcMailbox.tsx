@@ -1,4 +1,4 @@
-//  Copyright (c) 2024 FlyByWire Simulations
+//  Copyright (c) 2024, 2026 FlyByWire Simulations
 //  SPDX-License-Identifier: GPL-3.0
 
 import {
@@ -9,6 +9,7 @@ import {
   FSComponent,
   MapSubject,
   Subject,
+  Subscription,
   VNode,
 } from '@microsoft/msfs-sdk';
 import { Button } from '../../MsfsAvionicsCommon/UiWidgets/Button';
@@ -30,6 +31,8 @@ import {
 import '../style.scss';
 import { MailboxMessage } from './MailboxMessage';
 import { StatusBar } from './StatusBar';
+import { ButtonsOutput } from './ButtonsOutput';
+import { ButtonsWilcoUnable } from './ButtonsWilcoUnable';
 
 export class MailboxMessageBlock {
   public messages: CpdlcMessage[] = [];
@@ -51,6 +54,8 @@ export interface AtcMailboxProps {
 }
 
 export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
+  private readonly subscriptions: Subscription[] = [];
+
   private readonly topRef = FSComponent.createRef<HTMLDivElement>();
 
   private readonly mouseCursorRef = FSComponent.createRef<MouseCursor>();
@@ -70,13 +75,16 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
   private messageIndex: Subject<number> = Subject.create<number>(-1);
   private messageReadComplete: Subject<boolean> = Subject.create(false);
   private visibleMessageSemanticResponseIncomplete: Subject<boolean> = Subject.create<boolean>(false);
-  private visibleMessages: ArraySubject<CpdlcMessage> = ArraySubject.create();
+  private visibleMessages: ArraySubject<CpdlcMessage> = ArraySubject.create([]);
   private visibleMessageStatus: Subject<MailboxStatusMessage> = Subject.create<MailboxStatusMessage>(
     MailboxStatusMessage.NoMessage,
   );
   private response: Subject<number> = Subject.create<number>(-1);
   private systemStatusMessage: Subject<MailboxStatusMessage> = Subject.create(MailboxStatusMessage.NoMessage);
   private readonly answerRequired: Subject<boolean> = Subject.create<boolean>(false);
+
+  private readonly isOutputButtonsVisible: Subject<boolean> = Subject.create<boolean>(false);
+  private readonly isWilcoUnableButtonsVisible: Subject<boolean> = Subject.create<boolean>(false);
 
   /**
    * Force refresh of visible messages so component subscribers will be notified.
@@ -91,6 +99,31 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
     if (currentBlock) {
       this.visibleMessages.set([...currentBlock.messages]);
     }
+  }
+
+  private updateButtonVisibility(): void {
+    if (this.visibleMessages.length === 0) {
+      this.isOutputButtonsVisible.set(false);
+      this.isWilcoUnableButtonsVisible.set(false);
+      return;
+    }
+
+    const answerReq = this.answerRequired.get();
+    const firstMessage = this.visibleMessages.tryGet(0);
+
+    this.isOutputButtonsVisible.set(
+      !answerReq &&
+        Boolean(firstMessage) &&
+        !firstMessage?.SemanticResponseRequired &&
+        firstMessage?.Direction === AtsuMessageDirection.Downlink,
+    );
+
+    this.isWilcoUnableButtonsVisible.set(
+      answerReq &&
+        Boolean(firstMessage) &&
+        !firstMessage?.SemanticResponseRequired &&
+        firstMessage?.Content[0]?.ExpectedResponse === CpdlcMessageExpectedResponseType.WilcoUnable,
+    );
   }
 
   private handleIncomingMessages(cpdlcMessages: CpdlcMessage[]): void {
@@ -170,21 +203,29 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
     }
   }
 
-  private deleteMessage(uid: number) {
+  private setMessageStatus = (uid: number, response: number): void => {
+    const message = this.messages.getValue(uid);
+    if (message !== undefined) {
+      this.publisher.pub('readMessage', uid, true, false);
+      message.response = response;
+      this.messages.setValue(uid, message);
+      this.refreshVisibleMessage();
+    }
+  };
+
+  private deleteMessage = (uid: number): void => {
     this.publisher.pub('deleteMessage', uid, true, false);
-  }
+  };
 
-  private sendMessage(uid: number) {
+  private sendMessage = (uid: number): void => {
     this.publisher.pub('downlinkTransmit', uid, true, false);
-  }
+  };
 
-  private sortedMessageArray(messages: MapSubject<number, MailboxMessageBlock>) {
-    const arrMessages = Array.from(messages.get().values());
-    arrMessages.sort((a, b) => a.timestamp - b.timestamp);
-    return arrMessages;
-  }
+  private sendResponse = (uid: number, responseId: number): void => {
+    this.publisher.pub('uplinkResponse', { uid, responseId }, true, false);
+  };
 
-  private closeMessage(uid: number) {
+  private closeMessage = (uid: number): void => {
     console.log('closeMessage');
     // find the first visible message
     const arrMessages = this.sortedMessageArray(this.messages);
@@ -218,6 +259,15 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
         this.publisher.pub('visibleMessage', -1, true, false);
       }
     }
+  };
+
+  private monitorMessage = (uid: number) => this.publisher.pub('updateMessageMonitoring', uid, true, false);
+  private stopMessageMonitoring = (uid: number) => this.publisher.pub('stopMessageMonitoring', uid, true, false);
+
+  private sortedMessageArray(messages: MapSubject<number, MailboxMessageBlock>) {
+    const arrMessages = Array.from(messages.get().values());
+    arrMessages.sort((a, b) => a.timestamp - b.timestamp);
+    return arrMessages;
   }
 
   public onAfterRender(node: VNode): void {
@@ -225,25 +275,27 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
 
     this.topRef.instance.addEventListener('mousemove', this.onMouseMoveHandler);
 
-    this.subs.on('cpdlcMessages').handle((messages: CpdlcMessage[]) => this.handleIncomingMessages(messages));
-    this.subs.on('dclMessages').handle((messages: DclMessage[]) => this.handleIncomingMessages(messages));
-    this.subs.on('oclMessages').handle((messages: OclMessage[]) => this.handleIncomingMessages(messages));
-    this.subs.on('deleteMessage').handle((uid: number) => this.closeMessage(uid));
-    this.subs.on('messageStatus').handle((data: { uid: number; status: MailboxStatusMessage }) => {
-      const messageBlock = this.messages.getValue(data.uid);
-      if (messageBlock !== undefined) {
-        messageBlock.statusMessage = data.status;
-        if (data.status === MailboxStatusMessage.NoMessage) {
-          if (messageBlock.messages[0].MessageMonitoring === CpdlcMessageMonitoringState.Monitoring) {
-            messageBlock.statusMessage = MailboxStatusMessage.Monitoring;
-          } else if (messageBlock.messages[0].MessageMonitoring === CpdlcMessageMonitoringState.Cancelled) {
-            messageBlock.statusMessage = MailboxStatusMessage.MonitoringCancelled;
+    this.subscriptions.push(
+      this.subs.on('cpdlcMessages').handle((messages: CpdlcMessage[]) => this.handleIncomingMessages(messages)),
+      this.subs.on('dclMessages').handle((messages: DclMessage[]) => this.handleIncomingMessages(messages)),
+      this.subs.on('oclMessages').handle((messages: OclMessage[]) => this.handleIncomingMessages(messages)),
+      this.subs.on('deleteMessage').handle((uid: number) => this.closeMessage(uid)),
+      this.subs.on('messageStatus').handle((data: { uid: number; status: MailboxStatusMessage }) => {
+        const messageBlock = this.messages.getValue(data.uid);
+        if (messageBlock !== undefined) {
+          messageBlock.statusMessage = data.status;
+          if (data.status === MailboxStatusMessage.NoMessage) {
+            if (messageBlock.messages[0].MessageMonitoring === CpdlcMessageMonitoringState.Monitoring) {
+              messageBlock.statusMessage = MailboxStatusMessage.Monitoring;
+            } else if (messageBlock.messages[0].MessageMonitoring === CpdlcMessageMonitoringState.Cancelled) {
+              messageBlock.statusMessage = MailboxStatusMessage.MonitoringCancelled;
+            }
           }
+          this.messages.setValue(data.uid, messageBlock);
+          this.refreshVisibleMessage();
         }
-        this.messages.setValue(data.uid, messageBlock);
-        this.refreshVisibleMessage();
-      }
-    });
+      }),
+    );
 
     this.messages.sub((messages) => {
       // TODO needs to check for system power
@@ -279,63 +331,80 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
         this.messageReadComplete.set(currentMessage.reachEndOfMessage);
         this.visibleMessageStatus.set(currentMessage.statusMessage);
         this.visibleMessageSemanticResponseIncomplete.set(currentMessage.semanticResponseIncomplete);
+      } else {
+        this.selectedResponse.set(-1);
+        this.messageReadComplete.set(true);
+        this.visibleMessageStatus.set(MailboxStatusMessage.NoMessage);
+        this.visibleMessageSemanticResponseIncomplete.set(false);
       }
 
       // TODO: check for priority messages
 
       if (this.visibleMessages.length > 0 && this.visibleMessages.tryGet(0).Direction === AtsuMessageDirection.Uplink) {
         this.answerRequired.set(
-          this.visibleMessages[0].Content[0].ExpectedResponse !== CpdlcMessageExpectedResponseType.NotRequired &&
-            this.visibleMessages[0].Content[0].ExpectedResponse !== CpdlcMessageExpectedResponseType.No,
+          this.visibleMessages.tryGet(0)?.Content[0]?.ExpectedResponse !==
+            CpdlcMessageExpectedResponseType.NotRequired &&
+            this.visibleMessages.tryGet(0)?.Content[0]?.ExpectedResponse !== CpdlcMessageExpectedResponseType.No,
         );
+      } else {
+        this.answerRequired.set(false);
       }
     });
 
-    this.subs
-      .on('realTime')
-      .atFrequency(4)
-      .handle((_t) => {
-        const currentTime = _t / 1000;
-        const sortedArray = this.sortedMessageArray(this.messages);
+    this.subscriptions.push(
+      this.subs
+        .on('realTime')
+        .atFrequency(4)
+        .handle((_t) => {
+          const currentTime = _t / 1000;
+          const sortedArray = this.sortedMessageArray(this.messages);
 
-        sortedArray.forEach((message) => {
-          if (message.messages.length === 0) return;
+          sortedArray.forEach((message) => {
+            if (message.messages.length === 0) return;
 
-          const cpdlcMessage = message.messages[0];
-          const isVisible = message.messageVisible.get();
-          const currentTimeout = message.automaticCloseTimeout.get();
+            const cpdlcMessage = message.messages[0];
+            const isVisible = message.messageVisible.get();
+            const currentTimeout = message.automaticCloseTimeout.get();
 
-          if (cpdlcMessage.CloseAutomatically) {
-            if (isVisible && currentTimeout < 0) {
-              // start the timeout
-              if (
-                (cpdlcMessage.Direction === AtsuMessageDirection.Downlink &&
-                  cpdlcMessage.ComStatus === AtsuMessageComStatus.Sent) ||
-                (cpdlcMessage.Direction === AtsuMessageDirection.Uplink &&
-                  cpdlcMessage.Response?.Content[0].TypeId !== 'DM2' &&
-                  cpdlcMessage.Response?.ComStatus === AtsuMessageComStatus.Sent)
+            if (cpdlcMessage.CloseAutomatically) {
+              if (isVisible && currentTimeout < 0) {
+                // start the timeout
+                if (
+                  (cpdlcMessage.Direction === AtsuMessageDirection.Downlink &&
+                    cpdlcMessage.ComStatus === AtsuMessageComStatus.Sent) ||
+                  (cpdlcMessage.Direction === AtsuMessageDirection.Uplink &&
+                    cpdlcMessage.Response?.Content[0].TypeId !== 'DM2' &&
+                    cpdlcMessage.Response?.ComStatus === AtsuMessageComStatus.Sent)
+                ) {
+                  message.automaticCloseTimeout.set(currentTime);
+                }
+              } else if (
+                currentTimeout > 0 &&
+                currentTime - currentTimeout >= 2.0 &&
+                cpdlcMessage.MessageMonitoring !== CpdlcMessageMonitoringState.Finished
               ) {
-                message.automaticCloseTimeout.set(currentTime);
+                // check if the timeout is reached
+                this.closeMessage(cpdlcMessage.UniqueMessageID);
+              } else if (!isVisible && currentTimeout > 0) {
+                // reset the timeout of invisible messages
+                message.automaticCloseTimeout.set(-1);
               }
-            } else if (
-              currentTimeout > 0 &&
-              currentTime - currentTimeout >= 2.0 &&
-              cpdlcMessage.MessageMonitoring !== CpdlcMessageMonitoringState.Finished
-            ) {
-              // check if the timeout is reached
-              this.closeMessage(cpdlcMessage.UniqueMessageID);
-            } else if (!isVisible && currentTimeout > 0) {
-              // reset the timeout of invisible messages
-              message.automaticCloseTimeout.set(-1);
             }
-          }
-        });
-      });
+          });
+        }),
+
+      this.visibleMessages.sub(() => this.updateButtonVisibility(), true),
+      this.answerRequired.sub(() => this.updateButtonVisibility(), true),
+    );
   }
 
   destroy(): void {
     this.topRef.getOrDefault()?.removeEventListener('mousemove', this.onMouseMoveHandler);
     this.mouseCursorRef.getOrDefault()?.destroy();
+
+    for (const s of this.subscriptions) {
+      s.destroy();
+    }
 
     super.destroy();
   }
@@ -374,20 +443,29 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
           </div>
         </div>
         <div class="atc-mailbox-right-layout">
-          <Button
-            label="SEND"
-            onClick={() => this.sendMessage(this.visibleMessages.get(0).UniqueMessageID)}
-            buttonStyle="height: 50px; justify-content: flex-end;"
-          ></Button>
-          <Button
-            label="CANCEL"
-            onClick={() => this.deleteMessage(this.visibleMessages.get(0).UniqueMessageID)}
-            buttonStyle="height: 50px; justify-content: flex-end;"
-          ></Button>
-        </div>
-        {/* <Button label="UNABLE" onClick={() => {}} buttonStyle="height: 50px; justify-content: flex-end;"></Button>
+          <ButtonsOutput
+            messages={this.visibleMessages}
+            reachedEndOfMessage={Subject.create<boolean>(true)}
+            sendMessage={this.sendMessage}
+            deleteMessage={this.deleteMessage}
+            closeMessage={this.closeMessage}
+            visible={this.isOutputButtonsVisible}
+          />
+          <ButtonsWilcoUnable
+            messages={this.visibleMessages}
+            reachedEndOfMessage={Subject.create<boolean>(true)}
+            selectedResponse={this.selectedResponse}
+            setMessageStatus={this.setMessageStatus}
+            sendResponse={this.sendResponse}
+            closeMessage={this.closeMessage}
+            monitorMessage={this.monitorMessage}
+            cancelMessageMonitoring={this.stopMessageMonitoring}
+            visible={this.isWilcoUnableButtonsVisible}
+          />
+          {/* <Button label="UNABLE" onClick={() => {}} buttonStyle="height: 50px; justify-content: flex-end;"></Button>
           <Button label="LOAD SEC3" onClick={() => {}} buttonStyle="height: 50px; justify-content: flex-end;"></Button>
           <Button label="PRINT" onClick={() => {}} buttonStyle="height: 50px; justify-content: flex-end;"></Button> */}
+        </div>
         <MouseCursor side={Subject.create('CAPT')} ref={this.mouseCursorRef} />
       </div>
     );
