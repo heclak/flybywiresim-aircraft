@@ -91,13 +91,22 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
    */
   public refreshVisibleMessage(): void {
     const index = this.messageIndex.get();
-    if (index === -1) return;
+    if (index === -1) {
+      this.selectedResponse.set(-1);
+      return;
+    }
 
     const arrMessages = this.sortedMessageArray(this.messages);
     const currentBlock = arrMessages[index];
 
     if (currentBlock) {
+      this.selectedResponse.set(currentBlock.response);
       this.visibleMessages.set([...currentBlock.messages]);
+      this.messageReadComplete.set(currentBlock.reachEndOfMessage);
+      this.visibleMessageStatus.set(currentBlock.statusMessage);
+      this.visibleMessageSemanticResponseIncomplete.set(currentBlock.semanticResponseIncomplete);
+    } else {
+      this.selectedResponse.set(-1);
     }
   }
 
@@ -303,6 +312,10 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
       if (messages.size === 0) {
         this.visibleMessages.clear();
         this.messageIndex.set(-1);
+        this.selectedResponse.set(-1);
+        this.messageReadComplete.set(true);
+        this.visibleMessageStatus.set(MailboxStatusMessage.NoMessage);
+        this.visibleMessageSemanticResponseIncomplete.set(false);
         return;
       }
 

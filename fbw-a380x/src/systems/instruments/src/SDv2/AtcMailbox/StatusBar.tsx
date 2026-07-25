@@ -82,49 +82,49 @@ export class StatusBar extends DisplayComponent<StatusBarProps> {
   public onAfterRender(node: VNode): void {
     super.onAfterRender(node);
 
-    this.subs.push(
-      this.props.messages.sub(() => {
-        console.log('redrawing statusbar');
-        if (this.props.messages.length > 0) {
-          const message = this.props.messages.tryGet(0);
-          if (message) {
-            if (message.MessageMonitoring === CpdlcMessageMonitoringState.Finished) {
-              if (message.SemanticResponseRequired) {
-                this.time.set(message.Response?.Timestamp?.mailboxTimestamp());
-                this.station.set(`TO ${message.Response?.Station}`);
-              } else if (message.ReminderTimestamp !== null) {
-                this.time.set(message.ReminderTimestamp.mailboxTimestamp());
-                this.station.set(null);
-                this.status.set(null);
-              } else {
-                this.time.set('----Z');
-                this.station.set(null);
-              }
+    const updateStatusBar = (): void => {
+      console.log('redrawing statusbar');
+      if (this.props.messages.length > 0) {
+        const message = this.props.messages.tryGet(0);
+        if (message) {
+          if (message.MessageMonitoring === CpdlcMessageMonitoringState.Finished) {
+            if (message.SemanticResponseRequired) {
+              this.time.set(message.Response?.Timestamp?.mailboxTimestamp());
+              this.station.set(`TO ${message.Response?.Station}`);
+            } else if (message.ReminderTimestamp !== null) {
+              this.time.set(message.ReminderTimestamp.mailboxTimestamp());
+              this.station.set(null);
+              this.status.set(null);
             } else {
-              this.time.set(message.Timestamp?.mailboxTimestamp());
-              this.station.set(
-                `${message.Direction === AtsuMessageDirection.Downlink ? 'TO ' : 'FROM '} ${message.Station}`,
-              );
+              this.time.set('----Z');
+              this.station.set(null);
             }
+          } else {
+            this.time.set(message.Timestamp?.mailboxTimestamp());
+            this.station.set(
+              `${message.Direction === AtsuMessageDirection.Downlink ? 'TO ' : 'FROM '} ${message.Station}`,
+            );
+          }
 
-            const messageIsReminder =
-              !message.SemanticResponseRequired && message.MessageMonitoring === CpdlcMessageMonitoringState.Finished;
+          const messageIsReminder =
+            !message.SemanticResponseRequired && message.MessageMonitoring === CpdlcMessageMonitoringState.Finished;
 
-            if (message.Direction === AtsuMessageDirection.Uplink && !messageIsReminder) {
-              if (this.props.selectedResponse.get() !== -1) {
-                this.status.set(this.translateResponseId(this.props.selectedResponse.get(), message));
-              } else {
-                this.status.set(this.translateResponseMessage(message, message.Response));
-              }
+          if (message.Direction === AtsuMessageDirection.Uplink && !messageIsReminder) {
+            if (this.props.selectedResponse.get() !== -1) {
+              this.status.set(this.translateResponseId(this.props.selectedResponse.get(), message));
+            } else {
+              this.status.set(this.translateResponseMessage(message, message.Response));
             }
           }
-        } else {
-          // clear status
-          this.time.set(null);
-          this.station.set(null);
         }
-      }),
-    );
+      } else {
+        // clear status
+        this.time.set(null);
+        this.station.set(null);
+      }
+    };
+
+    this.subs.push(this.props.messages.sub(updateStatusBar), this.props.selectedResponse.sub(updateStatusBar));
   }
 
   render(): VNode {

@@ -48,7 +48,6 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
     const messageResponse = this.props.messages.tryGet(0)?.Response;
     const isDm2 = messageResponse?.Content?.[0]?.TypeId === 'DM2';
 
-    // 2. Calculate intermediate visibility states
     let showStandby = false;
     let showAnswers = false;
     let showSend = false;
@@ -64,7 +63,6 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
       }
     }
 
-    // Apply intermediate states
     this.showStandby.set(showStandby);
     this.showAnswers.set(showAnswers);
     this.showSend.set(showSend);
@@ -84,8 +82,7 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
       } else if (showSend) {
         isSendVisible = true;
         isCancelVisible = true;
-        isCloseVisible = true;
-      } else {
+      } else if (!showAnswers && !showSend) {
         isCloseVisible = true;
       }
     }
@@ -118,7 +115,6 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
   render(): VNode {
     return (
       <>
-        {/* Add monitoring to wilco */}
         <Button
           label="WILCO"
           onClick={() => {
@@ -143,6 +139,14 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
           containerStyle={this.isUnableVisible.map((visible) => (visible ? '' : 'display: none;'))}
         ></Button>
         <Button
+          label="SEND"
+          onClick={() =>
+            this.props.sendResponse(this.props.messages.tryGet(0).UniqueMessageID, this.props.selectedResponse.get())
+          }
+          buttonStyle="height: 50px; justify-content: flex-end;"
+          containerStyle={this.isSendVisible.map((visible) => (visible ? '' : 'display: none;'))}
+        ></Button>
+        <Button
           label="CANCEL"
           onClick={() => {
             this.props.setMessageStatus(this.props.messages.tryGet(0).UniqueMessageID, -1);
@@ -152,17 +156,6 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
           }}
           buttonStyle="height: 50px; justify-content: flex-end;"
           containerStyle={this.isCancelVisible.map((visible) => (visible ? '' : 'display: none;'))}
-        ></Button>
-        <Button
-          label="SEND"
-          onClick={() =>
-            this.props.setMessageStatus(
-              this.props.messages.tryGet(0).UniqueMessageID,
-              this.props.selectedResponse.get(),
-            )
-          }
-          buttonStyle="height: 50px; justify-content: flex-end;"
-          containerStyle={this.isSendVisible.map((visible) => (visible ? '' : 'display: none;'))}
         ></Button>
         <Button
           label="CLOSE"
