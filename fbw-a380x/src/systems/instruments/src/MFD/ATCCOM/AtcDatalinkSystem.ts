@@ -1,7 +1,7 @@
 // Copyright (c) 2025-2026 FlyByWire Simulations
 // SPDX-License-Identifier: GPL-3.0
 
-import { ArraySubject, EventBus, Instrument } from '@microsoft/msfs-sdk';
+import { ArraySubject, ConsumerSubject, EventBus, Instrument } from '@microsoft/msfs-sdk';
 import { AtcFmsMessages, FmsAtcMessages } from '@datalink/atc';
 import {
   AtisMessage,
@@ -74,6 +74,10 @@ export class AtcDatalinkSystem implements Instrument {
   private atisAutoUpdates: string[] = [];
 
   private atisReportsPrintActive: boolean = false;
+
+  private flightNumber = ConsumerSubject.create(this.sub.on('fmsFlightNumber'), null);
+  private fmsOrgin = ConsumerSubject.create(this.sub.on('fmsOrigin'), null);
+  private fmsDestination = ConsumerSubject.create(this.sub.on('fmsDestination'), null);
 
   #atcErrors = ArraySubject.create<AtcErrorMessage>();
 
@@ -195,6 +199,18 @@ export class AtcDatalinkSystem implements Instrument {
   onUpdate(): void {}
 
   destroy() {}
+
+  public getFlightNumber(): string {
+    return this.flightNumber.get();
+  }
+
+  public getFmsOrigin(): string {
+    return this.fmsOrgin.get();
+  }
+
+  public getFmsDestination(): string {
+    return this.fmsDestination.get();
+  }
 
   /**
    * Add ATC error message to ATCCOM message queue
