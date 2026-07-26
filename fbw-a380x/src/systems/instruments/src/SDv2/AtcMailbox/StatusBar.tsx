@@ -27,8 +27,7 @@ export interface StatusBarProps extends ComponentProps {
 export class StatusBar extends DisplayComponent<StatusBarProps> {
   private readonly subs = [] as Subscription[];
 
-  private readonly time: Subject<string> = Subject.create<string>(null);
-  private readonly station: Subject<string> = Subject.create<string>(null);
+  private readonly timeAndStation: Subject<string> = Subject.create<string>(null);
   private readonly status: Subject<string> = Subject.create<string>(null);
 
   private mailboxText = Subject.create<string | null>(null);
@@ -89,20 +88,18 @@ export class StatusBar extends DisplayComponent<StatusBarProps> {
         if (message) {
           if (message.MessageMonitoring === CpdlcMessageMonitoringState.Finished) {
             if (message.SemanticResponseRequired) {
-              this.time.set(message.Response?.Timestamp?.mailboxTimestamp());
-              this.station.set(`TO ${message.Response?.Station}`);
+              this.timeAndStation.set(
+                `${message.Response?.Timestamp?.mailboxTimestamp()} TO ${message.Response?.Station}`,
+              );
             } else if (message.ReminderTimestamp !== null) {
-              this.time.set(message.ReminderTimestamp.mailboxTimestamp());
-              this.station.set(null);
+              this.timeAndStation.set(message.ReminderTimestamp.mailboxTimestamp());
               this.status.set(null);
             } else {
-              this.time.set('----Z');
-              this.station.set(null);
+              this.timeAndStation.set('----Z');
             }
           } else {
-            this.time.set(message.Timestamp?.mailboxTimestamp());
-            this.station.set(
-              `${message.Direction === AtsuMessageDirection.Downlink ? 'TO ' : 'FROM '} ${message.Station}`,
+            this.timeAndStation.set(
+              `${message.Timestamp?.mailboxTimestamp()} ${message.Direction === AtsuMessageDirection.Downlink ? 'TO ' : 'FROM '} ${message.Station}`,
             );
           }
 
@@ -119,8 +116,7 @@ export class StatusBar extends DisplayComponent<StatusBarProps> {
         }
       } else {
         // clear status
-        this.time.set(null);
-        this.station.set(null);
+        this.timeAndStation.set(null);
       }
     };
 
@@ -130,8 +126,7 @@ export class StatusBar extends DisplayComponent<StatusBarProps> {
   render(): VNode {
     return (
       <div class="atc-mailbox-msg-status atc-mailbox-text">
-        <span>{this.time}</span>
-        <span>{this.station}</span>
+        <span>{this.timeAndStation}</span>
         <span class="status-msg status-open">{this.status}</span>
       </div>
     );
