@@ -30,11 +30,11 @@ export class RequestDepartureClearance extends DisplayComponent<MessageVisualiza
   private CreateDataBlock() {
     return {
       firstCall: true,
-      callsign: 'FBW123',
-      station: '',
+      callsign: this.props.atcService.getFlightNumber(),
+      station: this.originAirport.get(),
       stationManual: false,
-      from: '',
-      to: '',
+      from: this.originAirport.get(),
+      to: this.destAirport.get(),
       atis: '',
       gate: '',
       actype: 'A388',
@@ -42,11 +42,11 @@ export class RequestDepartureClearance extends DisplayComponent<MessageVisualiza
     };
   }
 
-  private readonly originAirport = Subject.create<string>('');
+  private readonly originAirport = Subject.create<string>(this.props.atcService.getFmsOrigin());
   private readonly gate = Subject.create<string>('');
   private readonly atisCode = Subject.create<string>('');
   private readonly aircraftType = Subject.create<string>('A388');
-  private readonly destAirport = Subject.create<string>('');
+  private readonly destAirport = Subject.create<string>(this.props.atcService.getFmsDestination());
   private readonly freeText = Subject.create<string>('');
 
   private dataBlock = this.CreateDataBlock();
