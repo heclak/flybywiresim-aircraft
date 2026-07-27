@@ -33,6 +33,7 @@ import { MailboxMessage } from './MailboxMessage';
 import { StatusBar } from './StatusBar';
 import { ButtonsOutput } from './ButtonsOutput';
 import { ButtonsWilcoUnable } from './ButtonsWilcoUnable';
+import { ButtonsClose } from './ButtonsClose';
 
 export class MailboxMessageBlock {
   public messages: CpdlcMessage[] = [];
@@ -71,20 +72,29 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
 
   private messages: MapSubject<number, MailboxMessageBlock> = MapSubject.create<number, MailboxMessageBlock>();
 
-  private selectedResponse: Subject<number> = Subject.create<number>(-1);
-  private messageIndex: Subject<number> = Subject.create<number>(-1);
-  private messageReadComplete: Subject<boolean> = Subject.create(false);
-  private visibleMessageSemanticResponseIncomplete: Subject<boolean> = Subject.create<boolean>(false);
-  private visibleMessages: ArraySubject<CpdlcMessage> = ArraySubject.create([]);
-  private visibleMessageStatus: Subject<MailboxStatusMessage> = Subject.create<MailboxStatusMessage>(
-    MailboxStatusMessage.NoMessage,
-  );
-  private response: Subject<number> = Subject.create<number>(-1);
-  private systemStatusMessage: Subject<MailboxStatusMessage> = Subject.create(MailboxStatusMessage.NoMessage);
-  private readonly answerRequired: Subject<boolean> = Subject.create<boolean>(false);
+  private selectedResponse = Subject.create<number>(-1);
+  private messageIndex = Subject.create<number>(-1);
+  private messageReadComplete = Subject.create(false);
+  private visibleMessageSemanticResponseIncomplete = Subject.create<boolean>(false);
+  private visibleMessages: ArraySubject<CpdlcMessage> = ArraySubject.create<CpdlcMessage>([]);
+  private visibleMessageStatus = Subject.create<MailboxStatusMessage>(MailboxStatusMessage.NoMessage);
+  private response = Subject.create<number>(-1);
+  private systemStatusMessage = Subject.create(MailboxStatusMessage.NoMessage);
+  private readonly answerRequired = Subject.create<boolean>(false);
 
-  private readonly isOutputButtonsVisible: Subject<boolean> = Subject.create<boolean>(false);
-  private readonly isWilcoUnableButtonsVisible: Subject<boolean> = Subject.create<boolean>(false);
+  private readonly pageIndex = Subject.create<number>(0);
+  private readonly pageCount = Subject.create<number>(0);
+  private readonly pageNumber = this.pageIndex.map((index) => index + 1);
+  private isPageNavVisible = this.pageCount.map((pageCount) => (pageCount > 1 ? 'inherit' : 'hidden'));
+  private isFirstPage = this.pageIndex.map((page) => page === 0);
+  private isLastPage = this.pageIndex.map((page) => page === this.pageCount.get() - 1);
+  private messageNumber = this.messageIndex.map((count) => count + 1);
+  private messageCount = Subject.create<number>(0);
+  private isMsgNavVisible = this.messageCount.map((messageCount) => (messageCount > 1 ? 'inherit' : 'hidden'));
+
+  private readonly isOutputButtonsVisible = Subject.create<boolean>(false);
+  private readonly isWilcoUnableButtonsVisible = Subject.create<boolean>(false);
+  private readonly isCloseButtonsVisible = Subject.create<boolean>(false);
 
   /**
    * Force refresh of visible messages so component subscribers will be notified.
@@ -132,6 +142,10 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
         Boolean(firstMessage) &&
         !firstMessage?.SemanticResponseRequired &&
         firstMessage?.Content[0]?.ExpectedResponse === CpdlcMessageExpectedResponseType.WilcoUnable,
+    );
+
+    this.isCloseButtonsVisible.set(
+      !answerReq && !firstMessage?.SemanticResponseRequired && firstMessage.Direction === AtsuMessageDirection.Uplink,
     );
   }
 
@@ -304,10 +318,19 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
           this.refreshVisibleMessage();
         }
       }),
+      this.pageNumber,
+      this.pageCount.sub((pageCount) => {
+        if (pageCount === 1) {
+          this.pageIndex.set(0);
+        }
+      }),
     );
 
     this.messages.sub((messages) => {
       // TODO needs to check for system power
+
+      this.messageCount.set(this.messages.size);
+
       console.log('updating view');
       if (messages.size === 0) {
         this.visibleMessages.clear();
@@ -426,6 +449,30 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
     return (
       <div ref={this.topRef} class="atc-mailbox-top-layout">
         <div class="atc-mailbox-left-layout">
+          <div class="atc-mailbox-msg-nav" style={{ visibility: this.isMsgNavVisible }}>
+            <IconButton
+              icon="single-up"
+              onClick={() => {
+                this.pageIndex.set(this.pageIndex.get() - 1);
+              }}
+              disabled={this.isFirstPage}
+              containerStyle="margin-bottom: auto"
+            />
+            <div class="atc-mailbox-msg-pg-number">
+              <div>MSG</div>
+              <div>
+                {this.messageNumber}/{this.messageCount}
+              </div>
+            </div>
+            <IconButton
+              icon="single-down"
+              onClick={() => {
+                this.pageIndex.set(this.pageIndex.get() + 1);
+              }}
+              disabled={this.isLastPage}
+              containerStyle="margin-top: auto"
+            />
+          </div>
           <Button label="PRINT" onClick={() => {}} buttonStyle="height: 50px;"></Button>
           <Button label="RECALL" onClick={() => {}} buttonStyle="height: 50px;"></Button>
         </div>
@@ -433,20 +480,30 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
           <div class="atc-mailbox-center-top">
             <StatusBar messages={this.visibleMessages} selectedResponse={this.selectedResponse} />
             <div class="atc-mailbox-msg-area">
-              <MailboxMessage messages={this.visibleMessages} />
-              <div class="atc-mailbox-msg-pg-number-indication">
+              <MailboxMessage messages={this.visibleMessages} pageIndex={this.pageIndex} pageCount={this.pageCount} />
+              <div class="atc-mailbox-msg-pg-nav" style={{ visibility: this.isPageNavVisible }}>
                 <IconButton
                   icon="double-up"
-                  onClick={() => {}}
-                  // disabled={this.isCurrentMsgFirstPage}
+                  onClick={() => {
+                    this.pageIndex.set(this.pageIndex.get() - 1);
+                  }}
+                  disabled={this.isFirstPage}
                   containerStyle="width: 70px; height: 40px; padding:4px"
                 />
                 <IconButton
                   icon="double-down"
-                  onClick={() => {}}
-                  // disabled={this.isCurrentMsgLastPage}
+                  onClick={() => {
+                    this.pageIndex.set(this.pageIndex.get() + 1);
+                  }}
+                  disabled={this.isLastPage}
                   containerStyle="width: 70px; height: 40px; padding:4px"
                 />
+                <div class="atc-mailbox-msg-pg-number">
+                  <div>PGE</div>
+                  <div>
+                    {this.pageNumber}/{this.pageCount}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -474,6 +531,11 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
             monitorMessage={this.monitorMessage}
             cancelMessageMonitoring={this.stopMessageMonitoring}
             visible={this.isWilcoUnableButtonsVisible}
+          />
+          <ButtonsClose
+            messages={this.visibleMessages}
+            closeMessage={this.closeMessage}
+            visible={this.isCloseButtonsVisible}
           />
           {/* <Button label="UNABLE" onClick={() => {}} buttonStyle="height: 50px; justify-content: flex-end;"></Button>
           <Button label="LOAD SEC3" onClick={() => {}} buttonStyle="height: 50px; justify-content: flex-end;"></Button>

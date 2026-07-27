@@ -115,8 +115,8 @@ export class StatusBar extends DisplayComponent<StatusBarProps> {
           }
         }
       } else {
-        // clear status
         this.timeAndStation.set(null);
+        this.status.set(null);
       }
     };
 

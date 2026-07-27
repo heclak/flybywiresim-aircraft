@@ -175,12 +175,14 @@ span.Amber {
 .atc-mailbox-msg-status {
   display: flex;
   flex-direction: row;
+  height: 38px;
 }
 
 .atc-mailbox-msg-area {
   padding: 0 5px;
   display: flex;
   flex-direction: row;
+  height: 190px;
 }
 
 .atc-mailbox-msg-body {
@@ -188,12 +190,27 @@ span.Amber {
   width:440px;
 }
 
-.atc-mailbox-msg-pg-number-indication {
+.atc-mailbox-msg-nav {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.atc-mailbox-msg-pg-nav {
   width: 80px;
   margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.atc-mailbox-msg-pg-number {
+  color: #fff;
+  font-size: 28px;
+  text-align: center;
+  line-height: 26px;
+  margin-top: auto;
+  margin-bottom: 5px
 }
 
 .status-msg {
