@@ -149,12 +149,21 @@ span.Amber {
 }
 
 .atc-mailbox-cb-1 {
+  display: flex;
   flex: 1;
   border-right: 2px solid white;
 }
 
 .atc-mailbox-cb-2 {
+  display: flex;
   flex: 1;
+}
+
+.atc-mailbox-cb-status-text {
+  font-size: 22px;
+  text-align: center;
+  margin: auto 0;
+  width: 100%;
 }
 
 .atc-mailbox-text {
