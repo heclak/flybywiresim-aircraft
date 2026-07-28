@@ -225,11 +225,24 @@ span.Amber {
 .status-msg {
   margin-left: auto;
   width: 150px;
-  text-align: center;
+  text-align: right;
+  padding: 2px 5px;
+
+  &.status-bg-green {
+    background-color: rgb(0, 255, 0);
+  }
+
+  &.status-bg-cyan {
+    background-color: rgb(0, 255, 255);
+  }
 }
 
 .status-open {
   color: rgb(0,255,255);
+}
+
+.status-other {
+  color: rgb(0,0,0);
 }
 
 .message-highlight {
