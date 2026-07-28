@@ -1,12 +1,12 @@
 // Copyright (c) 2026 FlyByWire Simulations
 // SPDX-License-Identifier: GPL-3.0
 
-import { CpdlcMessage } from '@datalink/common';
+import { AtsuMessageComStatus, CpdlcMessage } from '@datalink/common';
 import {
-  ArraySubject,
   ComponentProps,
   DisplayComponent,
   FSComponent,
+  MappedSubject,
   Subscribable,
   Subscription,
   VNode,
@@ -14,7 +14,7 @@ import {
 import { Button } from '../../MsfsAvionicsCommon/UiWidgets/Button';
 
 export interface ButtonsOutputProps extends ComponentProps {
-  messages: ArraySubject<CpdlcMessage>;
+  message: Subscribable<CpdlcMessage>;
   reachedEndOfMessage: Subscribable<boolean>;
   sendMessage: (uid: number) => void;
   deleteMessage: (uid: number) => void;
@@ -25,10 +25,47 @@ export interface ButtonsOutputProps extends ComponentProps {
 export class ButtonsOutput extends DisplayComponent<ButtonsOutputProps> {
   private readonly subs = [] as Subscription[];
 
+  private readonly showAnswers = MappedSubject.create(([message]) => {
+    if (!message) return false;
+    return message.ComStatus === AtsuMessageComStatus.Open || message.ComStatus === AtsuMessageComStatus.Failed;
+  }, this.props.message);
+
+  private readonly buttonsBlocked = MappedSubject.create(
+    ([message, reachedEnd]) => {
+      if (!message) return true;
+      return message.ComStatus === AtsuMessageComStatus.Sending || !reachedEnd;
+    },
+    this.props.message,
+    this.props.reachedEndOfMessage,
+  );
+
+  private readonly closeButtonVisibility = MappedSubject.create(
+    ([showAnswers, isVisible]) => {
+      return isVisible && !showAnswers ? '' : 'display: none';
+    },
+    this.showAnswers,
+    this.props.visible,
+  );
+  private readonly answerButtonsVisibility = MappedSubject.create(
+    ([showAnswers, isVisible]) => {
+      return isVisible && showAnswers ? '' : 'display: none';
+    },
+    this.showAnswers,
+    this.props.visible,
+  );
+
   public onAfterRender(node: VNode): void {
     super.onAfterRender(node);
 
-    this.subs.push(this.props.messages.sub(() => {}));
+    this.subs.push(this.showAnswers, this.buttonsBlocked, this.closeButtonVisibility, this.answerButtonsVisibility);
+  }
+
+  destroy(): void {
+    for (const s of this.subs) {
+      s.destroy();
+    }
+
+    super.destroy();
   }
 
   render(): VNode {
@@ -36,15 +73,24 @@ export class ButtonsOutput extends DisplayComponent<ButtonsOutputProps> {
       <>
         <Button
           label="SEND"
-          onClick={() => this.props.sendMessage(this.props.messages.get(0).UniqueMessageID)}
+          onClick={() => this.props.sendMessage(this.props.message.get().UniqueMessageID)}
           buttonStyle="height: 50px; justify-content: flex-end;"
-          containerStyle={this.props.visible.map((visible) => (visible ? '' : 'display: none;'))}
+          containerStyle={this.answerButtonsVisibility}
+          disabled={this.buttonsBlocked}
         ></Button>
         <Button
           label="CANCEL"
-          onClick={() => this.props.deleteMessage(this.props.messages.get(0).UniqueMessageID)}
+          onClick={() => this.props.deleteMessage(this.props.message.get().UniqueMessageID)}
           buttonStyle="height: 50px; justify-content: flex-end;"
-          containerStyle={this.props.visible.map((visible) => (visible ? '' : 'display: none;'))}
+          containerStyle={this.answerButtonsVisibility}
+          disabled={this.buttonsBlocked}
+        ></Button>
+        <Button
+          label="CLOSE"
+          onClick={() => this.props.closeMessage(this.props.message.get().UniqueMessageID)}
+          buttonStyle="height: 50px; justify-content: flex-end;"
+          containerStyle={this.closeButtonVisibility}
+          disabled={this.buttonsBlocked}
         ></Button>
       </>
     );
