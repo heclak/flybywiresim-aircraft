@@ -149,6 +149,90 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
     );
   }
 
+  // TODO Missing PRINT NOT AVAIL, REJ BY ATC, X MONITORED MSG, CHECK CLRCE
+  private translateStatusMessage = (status: MailboxStatusMessage) => {
+    switch (status) {
+      case MailboxStatusMessage.AnswerRequired:
+        return 'ANSWER MSG';
+      case MailboxStatusMessage.CommunicationFault:
+        return 'ATC DLK FAULT';
+      case MailboxStatusMessage.CommunicationNotAvailable:
+        return 'ATC DLK NOT AVAIL';
+      case MailboxStatusMessage.CommunicationNotInitialized:
+        return ''; // not on A380
+      case MailboxStatusMessage.MaximumDownlinkMessages:
+        return 'FILE FULL';
+      case MailboxStatusMessage.LinkLost:
+        return 'LINK LOST';
+      case MailboxStatusMessage.FlightplanLoadFailed:
+        return 'LOAD REJECTED';
+      case MailboxStatusMessage.FlightplanLoadPartial:
+        return 'LOAD PARTIAL';
+      case MailboxStatusMessage.FlightplanLoadingUnavailable:
+        return 'LOAD NOT AVAIL';
+      case MailboxStatusMessage.MonitoringFailed:
+        return 'MONIT FAILED';
+      case MailboxStatusMessage.MonitoringLost:
+        return 'MONIT LOST';
+      case MailboxStatusMessage.MonitoringUnavailable:
+        return 'MONIT NOT AVAIL';
+      case MailboxStatusMessage.NoAtcReply:
+        return 'NO ATC REPLY'; // TODO check if this is REJ BY ATC
+      case MailboxStatusMessage.OverflowClosed:
+        return 'OVERFLW CLOSED';
+      case MailboxStatusMessage.PrintFailed:
+        return 'PRINT FAILED';
+      case MailboxStatusMessage.PriorityMessage:
+        return 'PRIORITY MSG'; // TODO NOT ON A380
+      case MailboxStatusMessage.SendFailed:
+        return 'SEND FAILED';
+      case MailboxStatusMessage.FlightplanLoadSecondary:
+        return 'LOADED IN SEC3';
+      case MailboxStatusMessage.FlightplanLoadingSecondary:
+        return 'LOADING';
+      case MailboxStatusMessage.FmsDisplayForText:
+        return ''; // not on A380
+      case MailboxStatusMessage.FmsDisplayForModification:
+        return 'ATCCOM FOR MODIF';
+      case MailboxStatusMessage.MonitoringCancelled:
+        return 'MONIT CANCELLED';
+      case MailboxStatusMessage.Monitoring:
+        return 'FMS MONITORING';
+      case MailboxStatusMessage.NoFmData:
+        return 'NO SYS DATA';
+      case MailboxStatusMessage.NoMoreMessages:
+        return '';
+      case MailboxStatusMessage.NoMorePages:
+        return '';
+      case MailboxStatusMessage.PartialFmgsData:
+        return 'PARTIAL SYS DATA';
+      case MailboxStatusMessage.Printing:
+        return 'PRINTING';
+      case MailboxStatusMessage.RecallMode:
+        return '';
+      case MailboxStatusMessage.RecallEmpty:
+        return 'RECALL EMPTY, CONSULT MSG RECORD';
+      case MailboxStatusMessage.Reminder:
+        return '';
+      case MailboxStatusMessage.Sending:
+        return 'SENDING';
+      case MailboxStatusMessage.Sent:
+        return 'SENT';
+      case MailboxStatusMessage.WaitFmData:
+        return 'WAIT FOR SYS DATA';
+      case MailboxStatusMessage.NoMessage:
+      default:
+        return '';
+    }
+  };
+
+  private visibleMessagesStatusText = this.visibleMessageStatus.map((status) => {
+    return this.translateStatusMessage(status);
+  });
+  private systemStatusMessageText = this.systemStatusMessage.map((status) => {
+    return this.translateStatusMessage(status);
+  });
+
   private handleIncomingMessages(cpdlcMessages: CpdlcMessage[]): void {
     console.log('message received');
     console.log(cpdlcMessages);
@@ -431,6 +515,8 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
 
       this.visibleMessages.sub(() => this.updateButtonVisibility(), true),
       this.answerRequired.sub(() => this.updateButtonVisibility(), true),
+      this.visibleMessagesStatusText,
+      this.systemStatusMessageText,
     );
   }
 
@@ -508,8 +594,12 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
             </div>
           </div>
           <div class="atc-mailbox-center-bottom">
-            <div class="atc-mailbox-cb-1" />
-            <div class="atc-mailbox-cb-2" />
+            <div class="atc-mailbox-cb-1">
+              <span class="atc-mailbox-cb-status-text">{this.visibleMessagesStatusText}</span>
+            </div>
+            <div class="atc-mailbox-cb-2">
+              <span class="atc-mailbox-cb-status-text">{this.systemStatusMessageText}</span>
+            </div>
           </div>
         </div>
         <div class="atc-mailbox-right-layout">
