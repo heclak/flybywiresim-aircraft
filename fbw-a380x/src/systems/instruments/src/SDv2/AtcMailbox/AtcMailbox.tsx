@@ -76,7 +76,8 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
   private messageIndex = Subject.create<number>(-1);
   private messageReadComplete = Subject.create(false);
   private visibleMessageSemanticResponseIncomplete = Subject.create<boolean>(false);
-  private visibleMessages: ArraySubject<CpdlcMessage> = ArraySubject.create<CpdlcMessage>([]);
+  private visibleMessages: ArraySubject<CpdlcMessage> = ArraySubject.create([]);
+  private visibleMessage = Subject.create<CpdlcMessage | undefined>(undefined);
   private visibleMessageStatus = Subject.create<MailboxStatusMessage>(MailboxStatusMessage.NoMessage);
   private response = Subject.create<number>(-1);
   private systemStatusMessage = Subject.create(MailboxStatusMessage.NoMessage);
@@ -103,6 +104,7 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
     const index = this.messageIndex.get();
     if (index === -1) {
       this.selectedResponse.set(-1);
+      this.visibleMessage.set(undefined);
       return;
     }
 
@@ -112,11 +114,13 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
     if (currentBlock) {
       this.selectedResponse.set(currentBlock.response);
       this.visibleMessages.set([...currentBlock.messages]);
+      this.visibleMessage.set(currentBlock.messages[0]);
       this.messageReadComplete.set(currentBlock.reachEndOfMessage);
       this.visibleMessageStatus.set(currentBlock.statusMessage);
       this.visibleMessageSemanticResponseIncomplete.set(currentBlock.semanticResponseIncomplete);
     } else {
       this.selectedResponse.set(-1);
+      this.visibleMessage.set(undefined);
     }
   }
 
@@ -124,6 +128,7 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
     if (this.visibleMessages.length === 0) {
       this.isOutputButtonsVisible.set(false);
       this.isWilcoUnableButtonsVisible.set(false);
+      this.isCloseButtonsVisible.set(false);
       return;
     }
 
@@ -270,6 +275,9 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
         if (enhancedMessages[0].Response?.ComStatus === AtsuMessageComStatus.Sent) {
           messageBlock.response = -1;
         }
+
+        this.messages.setValue(enhancedMessages[0].UniqueMessageID, messageBlock);
+        this.refreshVisibleMessage();
       } else {
         // store new message in messages
         const message = new MailboxMessageBlock();
@@ -309,6 +317,20 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
       }
     }
   }
+
+  private reachedEndOfMessage = (uid: number, reachedEnd: boolean) => {
+    const message = this.messages.getValue(uid);
+    if (message !== undefined) {
+      if (reachedEnd) {
+        message.reachEndOfMessage = true;
+      }
+    }
+
+    const currentVisibleUid = this.visibleMessages.tryGet(0)?.UniqueMessageID;
+    if (currentVisibleUid === uid) {
+      this.messageReadComplete.set(message.reachEndOfMessage);
+    }
+  };
 
   private setMessageStatus = (uid: number, response: number): void => {
     const message = this.messages.getValue(uid);
@@ -418,6 +440,7 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
       console.log('updating view');
       if (messages.size === 0) {
         this.visibleMessages.clear();
+        this.visibleMessage.set(undefined);
         this.messageIndex.set(-1);
         this.selectedResponse.set(-1);
         this.messageReadComplete.set(true);
@@ -448,11 +471,13 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
         const currentMessage = arrMessages[this.messageIndex.get()];
         this.selectedResponse.set(currentMessage.response);
         this.visibleMessages.set(currentMessage.messages);
+        this.visibleMessage.set(currentMessage.messages[0]);
         this.messageReadComplete.set(currentMessage.reachEndOfMessage);
         this.visibleMessageStatus.set(currentMessage.statusMessage);
         this.visibleMessageSemanticResponseIncomplete.set(currentMessage.semanticResponseIncomplete);
       } else {
         this.selectedResponse.set(-1);
+        this.visibleMessage.set(undefined);
         this.messageReadComplete.set(true);
         this.visibleMessageStatus.set(MailboxStatusMessage.NoMessage);
         this.visibleMessageSemanticResponseIncomplete.set(false);
@@ -564,9 +589,14 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
         </div>
         <div class="atc-mailbox-center-layout">
           <div class="atc-mailbox-center-top">
-            <StatusBar messages={this.visibleMessages} selectedResponse={this.selectedResponse} />
+            <StatusBar message={this.visibleMessage} selectedResponse={this.selectedResponse} />
             <div class="atc-mailbox-msg-area">
-              <MailboxMessage messages={this.visibleMessages} pageIndex={this.pageIndex} pageCount={this.pageCount} />
+              <MailboxMessage
+                messages={this.visibleMessages}
+                reachedEndOfMessage={this.reachedEndOfMessage}
+                pageIndex={this.pageIndex}
+                pageCount={this.pageCount}
+              />
               <div class="atc-mailbox-msg-pg-nav" style={{ visibility: this.isPageNavVisible }}>
                 <IconButton
                   icon="double-up"
@@ -604,16 +634,16 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
         </div>
         <div class="atc-mailbox-right-layout">
           <ButtonsOutput
-            messages={this.visibleMessages}
-            reachedEndOfMessage={Subject.create<boolean>(true)}
+            message={this.visibleMessage}
+            reachedEndOfMessage={this.messageReadComplete}
             sendMessage={this.sendMessage}
             deleteMessage={this.deleteMessage}
             closeMessage={this.closeMessage}
             visible={this.isOutputButtonsVisible}
           />
           <ButtonsWilcoUnable
-            messages={this.visibleMessages}
-            reachedEndOfMessage={Subject.create<boolean>(true)}
+            message={this.visibleMessage}
+            reachedEndOfMessage={this.messageReadComplete}
             selectedResponse={this.selectedResponse}
             setMessageStatus={this.setMessageStatus}
             sendResponse={this.sendResponse}
@@ -623,7 +653,7 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
             visible={this.isWilcoUnableButtonsVisible}
           />
           <ButtonsClose
-            messages={this.visibleMessages}
+            message={this.visibleMessage}
             closeMessage={this.closeMessage}
             visible={this.isCloseButtonsVisible}
           />

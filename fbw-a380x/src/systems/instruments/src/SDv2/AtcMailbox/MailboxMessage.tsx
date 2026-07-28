@@ -43,6 +43,7 @@ export interface MailboxMessageProps extends ComponentProps {
   messages: ArraySubject<CpdlcMessage>;
   pageIndex: Subscribable<number>;
   pageCount: Subject<number>;
+  reachedEndOfMessage: (uid: number, reachedEnd: boolean) => void;
 }
 
 export class MailboxMessage extends DisplayComponent<MailboxMessageProps> {
@@ -202,6 +203,8 @@ export class MailboxMessage extends DisplayComponent<MailboxMessageProps> {
         const pageData = this.getPageData(lines, pageIndex, 5);
 
         this.props.pageCount.set(pageData.pageCount);
+
+        this.props.reachedEndOfMessage(message.UniqueMessageID, pageData.pageCount <= pageIndex + 1);
 
         this.textRef.instance.innerHTML = pageData.html;
 
