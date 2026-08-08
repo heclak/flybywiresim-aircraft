@@ -1,4 +1,4 @@
-import { ArraySubject, DisplayComponent, FSComponent, Subject, VNode } from '@microsoft/msfs-sdk';
+import { ArraySubject, DisplayComponent, FSComponent, Subject, Subscription, VNode } from '@microsoft/msfs-sdk';
 
 import './MfdAtccomRequest.scss';
 import { AtccomMfdPageProps } from '../../MFD';
@@ -7,19 +7,23 @@ import { AtccomFooter } from './MfdAtccomFooter';
 import { Button } from '../../../MsfsAvionicsCommon/UiWidgets/Button';
 import { RequestMenuButton } from '../common/RequestMenuButton';
 import { ActivePageTitleBar } from '../common/ActivePageTitleBar';
-import { DropdownMenu } from '../../../MsfsAvionicsCommon/UiWidgets/DropdownMenu';
 import { MaxRequestElements, MessageFrame, MessageTable } from './Messages/Registry';
-import { DclMessage } from '@datalink/common';
+import { AtsuMailboxMessages, DclMessage } from '@datalink/common';
 
 interface MfdAtccomRequestProps extends AtccomMfdPageProps {}
 
 export class MfdAtccomRequest extends DisplayComponent<MfdAtccomRequestProps> {
-  private dropdownMenuRef = FSComponent.createRef<DropdownMenu>();
+  private readonly subs = [] as Subscription[];
+
+  private subscriber = this.props.bus.getSubscriber<AtsuMailboxMessages>();
 
   private elements: { id: string; message: undefined; readyToSend: boolean }[] = [];
+
   private FanMode: string = 'A';
 
   private messageElements = ArraySubject.create<MessageFrame>();
+
+  private isXfrButtonDisabled = Subject.create<boolean>(true);
 
   protected onNewData() {}
 
@@ -78,6 +82,8 @@ export class MfdAtccomRequest extends DisplayComponent<MfdAtccomRequestProps> {
       // register dcl message
       this.props.atcService.registerMessages([this.createDclMessage(this.messageElements.getArray()[0].message)]);
     }
+
+    this.isXfrButtonDisabled.set(true);
   }
 
   // Convert this to use a subscription when elements is changed
@@ -106,6 +112,22 @@ export class MfdAtccomRequest extends DisplayComponent<MfdAtccomRequestProps> {
 
   public onAfterRender(node: VNode): void {
     super.onAfterRender(node);
+
+    this.subs.push(
+      this.messageElements.sub((idx, type, item, array) => {
+        // scan through array for ready to send
+        let pageReadyToSend = true;
+        array.forEach((element) => {
+          if (!element.readyToSend) pageReadyToSend = false;
+        });
+        this.isXfrButtonDisabled.set(!pageReadyToSend);
+      }),
+
+      this.subscriber.on('downlinkTransmit').handle(() => {
+        this.elements = [];
+        this.renderElements();
+      }),
+    );
   }
 
   render(): VNode {
@@ -227,6 +249,7 @@ export class MfdAtccomRequest extends DisplayComponent<MfdAtccomRequestProps> {
                 onClick={() => {
                   this.elements = [];
                   this.renderElements();
+                  // TODO MessageElements need clearing too
                 }}
                 buttonStyle="width: 190px; height:64px;"
               />
@@ -234,7 +257,7 @@ export class MfdAtccomRequest extends DisplayComponent<MfdAtccomRequestProps> {
             <div style="position:absolute; right:0px">
               <Button
                 label="XFR<br /> TO MAILBOX"
-                disabled={Subject.create(false)}
+                disabled={this.isXfrButtonDisabled}
                 onClick={() => this.transferToMailbox()}
                 buttonStyle="width: 190px; height:64px;"
               />
