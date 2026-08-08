@@ -13,7 +13,7 @@ import {
 } from '@microsoft/msfs-sdk';
 import { Button } from '../../MsfsAvionicsCommon/UiWidgets/Button';
 
-export interface ButtonsWilcoUnableProps extends ComponentProps {
+export interface ButtonsRogerProps extends ComponentProps {
   message: Subscribable<CpdlcMessage | undefined>;
   reachedEndOfMessage: Subscribable<boolean>;
   selectedResponse: Subscribable<number>;
@@ -25,15 +25,12 @@ export interface ButtonsWilcoUnableProps extends ComponentProps {
   visible: Subscribable<boolean>;
 }
 
-export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps> {
+export class ButtonsRoger extends DisplayComponent<ButtonsRogerProps> {
   private readonly subscriptions = [] as Subscription[];
 
   private readonly buttonsBlocked = Subject.create<boolean>(false);
-  private readonly showSend = Subject.create<boolean>(false);
 
-  private readonly isWilcoVisible = Subject.create<boolean>(false);
-  private readonly isStandbyVisible = Subject.create<boolean>(false);
-  private readonly isUnableVisible = Subject.create<boolean>(false);
+  private readonly isRogerVisible = Subject.create<boolean>(false);
   private readonly isSendVisible = Subject.create<boolean>(false);
   private readonly isCancelVisible = Subject.create<boolean>(false);
   private readonly isCloseVisible = Subject.create<boolean>(false);
@@ -45,37 +42,24 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
     const message = this.props.message.get();
     const messageResponse = message?.Response;
     const comStatus = message?.ComStatus;
-    const isDm2 = messageResponse?.Content?.[0]?.TypeId === 'DM2';
 
-    let showStandby = false;
     let showAnswers = false;
     let showSend = false;
 
     if (isSelected) {
       showSend = true;
-    } else {
-      if (!messageResponse) {
-        showStandby = true;
-        showAnswers = true;
-      } else if (isDm2) {
-        showAnswers = true;
-      }
+    } else if (!messageResponse) {
+      showAnswers = true;
     }
 
-    this.showSend.set(showSend);
-
-    let isWilcoVisible = false;
-    let isStandbyVisible = false;
-    let isUnableVisible = false;
+    let isRogerVisible = false;
     let isSendVisible = false;
     let isCancelVisible = false;
     let isCloseVisible = false;
 
     if (isVisible) {
       if (showAnswers) {
-        isWilcoVisible = true;
-        isUnableVisible = true;
-        isStandbyVisible = showStandby;
+        isRogerVisible = true;
       } else if (showSend) {
         isSendVisible = true;
         isCancelVisible = true;
@@ -84,9 +68,7 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
       }
     }
 
-    this.isWilcoVisible.set(isWilcoVisible);
-    this.isStandbyVisible.set(isStandbyVisible);
-    this.isUnableVisible.set(isUnableVisible);
+    this.isRogerVisible.set(isRogerVisible);
     this.isSendVisible.set(isSendVisible);
     this.isCancelVisible.set(isCancelVisible);
     this.isCloseVisible.set(isCloseVisible);
@@ -118,29 +100,15 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
     return (
       <>
         <Button
-          label="WILCO"
+          label="ROGER"
           onClick={() => {
-            this.props.setMessageStatus(this.props.message.get().UniqueMessageID, 0);
+            this.props.setMessageStatus(this.props.message.get().UniqueMessageID, 3);
             if (UplinkMonitor.relevantMessage(this.props.message.get())) {
               this.props.monitorMessage(this.props.message.get().UniqueMessageID);
             }
           }}
           buttonStyle="height: 50px; justify-content: flex-end;"
-          containerStyle={this.isWilcoVisible.map((visible) => (visible ? '' : 'display: none;'))}
-          disabled={this.buttonsBlocked}
-        ></Button>
-        <Button
-          label="STANDBY"
-          onClick={() => this.props.setMessageStatus(this.props.message.get().UniqueMessageID, 2)}
-          buttonStyle="height: 50px; justify-content: flex-end;"
-          containerStyle={this.isStandbyVisible.map((visible) => (visible ? '' : 'display: none;'))}
-          disabled={this.buttonsBlocked}
-        ></Button>
-        <Button
-          label="UNABLE"
-          onClick={() => this.props.setMessageStatus(this.props.message.get().UniqueMessageID, 1)}
-          buttonStyle="height: 50px; justify-content: flex-end;"
-          containerStyle={this.isUnableVisible.map((visible) => (visible ? '' : 'display: none;'))}
+          containerStyle={this.isRogerVisible.map((visible) => (visible ? '' : 'display: none;'))}
           disabled={this.buttonsBlocked}
         ></Button>
         <Button
