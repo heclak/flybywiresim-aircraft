@@ -212,6 +212,10 @@ export class AtcDatalinkSystem implements Instrument {
     return this.fmsDestination.get();
   }
 
+  public atcMessages(): CpdlcMessage[] {
+    return this.messageStorage.atcMessagesBuffer;
+  }
+
   /**
    * Add ATC error message to ATCCOM message queue
    * @param {FmsErrorType} errorType error type

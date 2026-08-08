@@ -1,13 +1,13 @@
 import { DisplayComponent, FSComponent, Subject, VNode } from '@microsoft/msfs-sdk';
 
 import './MfdAtccomMsgRecord.scss';
-import { AbstractMfdPageProps } from '../../MFD';
-import { Footer } from '../common/Footer';
+import { AtccomMfdPageProps } from '../../MFD';
+import { AtccomFooter } from './MfdAtccomFooter';
 
 import { ActivePageTitleBar } from '../common/ActivePageTitleBar';
 import { Button } from '../../../MsfsAvionicsCommon/UiWidgets/Button';
 
-interface MfdAtccomMsgRecordProps extends AbstractMfdPageProps {}
+interface MfdAtccomMsgRecordProps extends AtccomMfdPageProps {}
 
 export class MfdAtccomMsgRecord extends DisplayComponent<MfdAtccomMsgRecordProps> {
   protected onNewData() {}
@@ -43,12 +43,7 @@ export class MfdAtccomMsgRecord extends DisplayComponent<MfdAtccomMsgRecordProps
             </div>
           </div>
         </div>
-        <Footer
-          bus={this.props.bus}
-          mfd={this.props.mfd}
-          fmcService={this.props.fmcService}
-          flightPlanInterface={this.props.fmcService.master.flightPlanInterface}
-        />
+        <AtccomFooter bus={this.props.bus} mfd={this.props.mfd} atcService={this.props.atcService} />
       </>
     );
   }
