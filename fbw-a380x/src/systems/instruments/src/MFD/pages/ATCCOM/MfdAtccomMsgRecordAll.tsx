@@ -1,21 +1,48 @@
 import { DisplayComponent, FSComponent, Subject, VNode } from '@microsoft/msfs-sdk';
 
 import './MfdAtccomMsgRecord.scss';
-import { AbstractMfdPageProps } from '../../MFD';
-import { Footer } from '../common/Footer';
+import { AtccomMfdPageProps } from '../../MFD';
+import { AtccomFooter } from './MfdAtccomFooter';
 
 import { ActivePageTitleBar } from '../common/ActivePageTitleBar';
 import { Button } from '../../../MsfsAvionicsCommon/UiWidgets/Button';
 import { MessageElement } from './Elements/MessageElement';
 import { MessageRecordNav } from './Elements/MessageRecordNav';
+import { CpdlcMessage } from '@datalink/common';
 
-interface MfdAtccomMsgRecordAllProps extends AbstractMfdPageProps {}
+interface MfdAtccomMsgRecordAllProps extends AtccomMfdPageProps {}
 
 export class MfdAtccomMsgRecordAll extends DisplayComponent<MfdAtccomMsgRecordAllProps> {
+  private messages = Subject.create<CpdlcMessage[]>([]);
+
+  private readonly msgListRef = FSComponent.createRef<HTMLDivElement>();
+
   protected onNewData() {}
+
+  private renderMessages(): void {
+    const messages = this.messages.get();
+    messages.forEach((message, index) => {
+      const node: VNode = (
+        <MessageElement
+          message={message}
+          onClick={() => {
+            this.props.mfd.uiService.navigateTo('atccom/msg-record/all-msg-expand/' + index);
+          }}
+        />
+      );
+      FSComponent.render(node, this.msgListRef.instance);
+    });
+  }
 
   public onAfterRender(node: VNode): void {
     super.onAfterRender(node);
+
+    this.messages.set(this.props.atcService.atcMessages());
+
+    console.log(this.messages.get());
+    this.renderMessages();
+
+    this.messages.sub(() => this.renderMessages());
   }
 
   render(): VNode {
@@ -25,8 +52,8 @@ export class MfdAtccomMsgRecordAll extends DisplayComponent<MfdAtccomMsgRecordAl
         {/* begin page content */}
         <div class="mfd-page-container">
           <div style="display:flex; flex: 1 1 auto; width:100%">
-            <div id="msg-record-list">
-              <MessageElement
+            <div ref={this.msgListRef} id="msg-record-list">
+              {/* <MessageElement
                 msgTime="1323Z"
                 msgOriginDest="LFBO"
                 msgStatus="UNABLE"
@@ -52,8 +79,8 @@ export class MfdAtccomMsgRecordAll extends DisplayComponent<MfdAtccomMsgRecordAl
                 onClick={() => {
                   this.props.mfd.uiService.navigateTo('atccom/msg-record/all-msg-expand');
                 }}
-              />
-              <div style="flex-grow: 1;" />
+              /> */}
+              {/* <div style="flex-grow: 1;" /> */}
               {/* fill space vertically */}
             </div>
             <div id="msg-record-scrollbar"></div>
@@ -68,7 +95,7 @@ export class MfdAtccomMsgRecordAll extends DisplayComponent<MfdAtccomMsgRecordAl
             </div>
           </div>
         </div>
-        <div
+        {/* <div
           id="atccom-inop"
           style="
     position: absolute;
@@ -83,13 +110,8 @@ export class MfdAtccomMsgRecordAll extends DisplayComponent<MfdAtccomMsgRecordAl
     color: #e68000"
         >
           <span>NOT YET IMPLEMENTED</span>
-        </div>
-        <Footer
-          bus={this.props.bus}
-          mfd={this.props.mfd}
-          fmcService={this.props.fmcService}
-          flightPlanInterface={this.props.fmcService.master.flightPlanInterface}
-        />
+        </div> */}
+        <AtccomFooter bus={this.props.bus} mfd={this.props.mfd} atcService={this.props.atcService} />
       </>
     );
   }

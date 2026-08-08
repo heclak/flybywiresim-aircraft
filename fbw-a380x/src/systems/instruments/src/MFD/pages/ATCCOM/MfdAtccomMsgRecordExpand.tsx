@@ -1,15 +1,47 @@
 import { DisplayComponent, FSComponent, Subject, VNode } from '@microsoft/msfs-sdk';
 
 import './MfdAtccomMsgRecord.scss';
-import { AbstractMfdPageProps } from '../../MFD';
-import { Footer } from '../common/Footer';
+import { AtccomMfdPageProps } from '../../MFD';
+import { AtccomFooter } from './MfdAtccomFooter';
 
 import { ActivePageTitleBar } from '../common/ActivePageTitleBar';
 import { Button } from '../../../MsfsAvionicsCommon/UiWidgets/Button';
+import {
+  AtsuMessageDirection,
+  AtsuMessageSerializationFormat,
+  CpdlcMessage,
+  CpdlcMessagesDownlink,
+} from '@datalink/common';
 
-interface MfdAtccomMsgRecordExpandProps extends AbstractMfdPageProps {}
+interface MfdAtccomMsgRecordExpandProps extends AtccomMfdPageProps {}
 
 export class MfdAtccomMsgRecordExpand extends DisplayComponent<MfdAtccomMsgRecordExpandProps> {
+  private readonly messageIndex = Number(this.props.mfd.uiService.activeUri.get().extra);
+  private message = Subject.create<CpdlcMessage>(null);
+  private messageTime = this.message.map((msg) => {
+    if (!msg) return;
+    return msg.Timestamp.mailboxTimestamp();
+  });
+  private messageStation = this.message.map((msg) => {
+    if (!msg) return;
+    return (msg.Direction === AtsuMessageDirection.Uplink ? 'FROM ' : 'TO ') + msg.Station;
+  });
+  private messageStatus = this.message.map((msg) => {
+    if (!msg) return;
+    const responseId = msg.Response?.Content?.[0]?.TypeId;
+    return responseId !== undefined && CpdlcMessagesDownlink[responseId] ? CpdlcMessagesDownlink[responseId][0][0] : '';
+  });
+  private messageContent = this.message.map((msg) => {
+    if (!msg) return;
+    return msg.serialize(AtsuMessageSerializationFormat.FmsDisplay);
+  });
+
+  onAfterRender(node: VNode): void {
+    super.onAfterRender(node);
+
+    this.message.set(this.props.atcService.atcMessages()[this.messageIndex]);
+  }
+
   render(): VNode {
     return (
       <>
@@ -19,21 +51,11 @@ export class MfdAtccomMsgRecordExpand extends DisplayComponent<MfdAtccomMsgRecor
           <div style="display:flex; flex: 1 1 auto; width:100%">
             <div class="msg-record-msg-element mfd-label green">
               <div>
-                <span class="msg-time">0107Z</span>
-                <span class="msg-origin-dest">FROM KZWY</span>
-                <span class="msg-status">WILCO</span>
+                <span class="msg-time">{this.messageTime}</span>
+                <span class="msg-origin-dest">{this.messageStation}</span>
+                <span class="msg-status">{this.messageStatus}</span>
               </div>
-              <div class="msg-body-expand">
-                {`WSXX99 EBBR 092010 SIGA0M KZWY SIGMET
-                FOXTROT 13 VALID 092100/100300 KKCI - NEW //
-                  YORK OCEANIC FIR TC GABRIELLE OBS AT
-                  2100Z NR N4042 W04524 MOV NE 18KT. NC. //
-                  EMBED TS TOP FL470 WI N4500 W04100 -
-                  N4230 W04145 - N3930 W04615 - N4145
-                  W04900 //
-                  - N4500 W04715 - N4500 W04100. FCST 0300Z
-                  TC CENTER N4158 W04324.//`}
-              </div>
+              <div class="msg-body-expand">{this.messageContent}</div>
             </div>
             <div style="flex-grow: 1;" />
             {/* fill space vertically */}
@@ -53,7 +75,7 @@ export class MfdAtccomMsgRecordExpand extends DisplayComponent<MfdAtccomMsgRecor
             </div>
           </div>
         </div>
-        <div
+        {/*<div
           id="atccom-inop"
           style="
     position: absolute;
@@ -68,13 +90,8 @@ export class MfdAtccomMsgRecordExpand extends DisplayComponent<MfdAtccomMsgRecor
     color: #e68000"
         >
           <span>NOT YET IMPLEMENTED</span>
-        </div>
-        <Footer
-          bus={this.props.bus}
-          mfd={this.props.mfd}
-          fmcService={this.props.fmcService}
-          flightPlanInterface={this.props.fmcService.master.flightPlanInterface}
-        />
+        </div>*/}
+        <AtccomFooter bus={this.props.bus} mfd={this.props.mfd} atcService={this.props.atcService} />
       </>
     );
   }

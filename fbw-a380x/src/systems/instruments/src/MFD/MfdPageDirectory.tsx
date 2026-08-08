@@ -291,25 +291,9 @@ export function pageForUrl(
         />
       );
     case 'atccom/msg-record':
-      return (
-        <MfdAtccomMsgRecord
-          pageTitle="MSG RECORD"
-          bus={bus}
-          mfd={mfd}
-          fmcService={fmcService}
-          flightPlanInterface={fmcService.master.flightPlanInterface}
-        />
-      );
+      return <MfdAtccomMsgRecord pageTitle="MSG RECORD" bus={bus} mfd={mfd} atcService={atcService} />;
     case 'atccom/msg-record/all-msg':
-      return (
-        <MfdAtccomMsgRecordAll
-          pageTitle="MSG RECORD/ALL MSG"
-          bus={bus}
-          mfd={mfd}
-          fmcService={fmcService}
-          flightPlanInterface={fmcService.master.flightPlanInterface}
-        />
-      );
+      return <MfdAtccomMsgRecordAll pageTitle="MSG RECORD/ALL MSG" bus={bus} mfd={mfd} atcService={atcService} />;
     case 'atccom/msg-record/monitored-msg':
       return (
         <MfdAtccomMsgRecordMonitored
@@ -322,13 +306,7 @@ export function pageForUrl(
       );
     case 'atccom/msg-record/all-msg-expand':
       return (
-        <MfdAtccomMsgRecordExpand
-          pageTitle="MSG RECORD/ALL MSG/EXPAND"
-          bus={bus}
-          mfd={mfd}
-          fmcService={fmcService}
-          flightPlanInterface={fmcService.master.flightPlanInterface}
-        />
+        <MfdAtccomMsgRecordExpand pageTitle="MSG RECORD/ALL MSG/EXPAND" bus={bus} mfd={mfd} atcService={atcService} />
       );
     case 'atccom/d-atis/list':
       return <MfdAtccomDAtis pageTitle="D-ATIS/LIST" bus={bus} mfd={mfd} atcService={atcService} />;

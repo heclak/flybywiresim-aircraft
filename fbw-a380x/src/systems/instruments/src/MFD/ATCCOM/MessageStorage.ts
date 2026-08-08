@@ -77,5 +77,7 @@ export class MessageStorage {
    */
   public resetAtcData(): void {
     this.atisReports = new Map();
+    this.atcMessagesBuffer = [];
+    this.atcMonitoredMessages = [];
   }
 }
