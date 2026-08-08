@@ -29,8 +29,6 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
   private readonly subscriptions = [] as Subscription[];
 
   private readonly buttonsBlocked = Subject.create<boolean>(false);
-  private readonly showAnswers = Subject.create<boolean>(false);
-  private readonly showStandby = Subject.create<boolean>(false);
   private readonly showSend = Subject.create<boolean>(false);
 
   private readonly isWilcoVisible = Subject.create<boolean>(false);
@@ -64,8 +62,6 @@ export class ButtonsWilcoUnable extends DisplayComponent<ButtonsWilcoUnableProps
       }
     }
 
-    this.showStandby.set(showStandby);
-    this.showAnswers.set(showAnswers);
     this.showSend.set(showSend);
 
     let isWilcoVisible = false;

@@ -34,6 +34,8 @@ import { StatusBar } from './StatusBar';
 import { ButtonsOutput } from './ButtonsOutput';
 import { ButtonsWilcoUnable } from './ButtonsWilcoUnable';
 import { ButtonsClose } from './ButtonsClose';
+import { ButtonsRoger } from './ButtonsRoger';
+import { ButtonsAffirmNegative } from './ButtonsAffirmNegative';
 
 export class MailboxMessageBlock {
   public messages: CpdlcMessage[] = [];
@@ -93,8 +95,10 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
   private messageCount = Subject.create<number>(0);
   private isMsgNavVisible = this.messageCount.map((messageCount) => (messageCount > 1 ? 'inherit' : 'hidden'));
 
-  private readonly isOutputButtonsVisible = Subject.create<boolean>(false);
   private readonly isWilcoUnableButtonsVisible = Subject.create<boolean>(false);
+  private readonly isAffirmNegativeButtonsVisible = Subject.create<boolean>(false);
+  private readonly isRogerButtonsVisible = Subject.create<boolean>(false);
+  private readonly isOutputButtonsVisible = Subject.create<boolean>(false);
   private readonly isCloseButtonsVisible = Subject.create<boolean>(false);
 
   /**
@@ -126,14 +130,30 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
 
   private updateButtonVisibility(): void {
     if (this.visibleMessages.length === 0) {
-      this.isOutputButtonsVisible.set(false);
       this.isWilcoUnableButtonsVisible.set(false);
+      this.isAffirmNegativeButtonsVisible.set(false);
+      this.isRogerButtonsVisible.set(false);
+      this.isOutputButtonsVisible.set(false);
       this.isCloseButtonsVisible.set(false);
       return;
     }
 
     const answerReq = this.answerRequired.get();
     const firstMessage = this.visibleMessages.tryGet(0);
+
+    this.isAffirmNegativeButtonsVisible.set(
+      answerReq &&
+        Boolean(firstMessage) &&
+        !firstMessage?.SemanticResponseRequired &&
+        firstMessage?.Content[0]?.ExpectedResponse === CpdlcMessageExpectedResponseType.AffirmNegative,
+    );
+
+    this.isRogerButtonsVisible.set(
+      answerReq &&
+        Boolean(firstMessage) &&
+        !firstMessage?.SemanticResponseRequired &&
+        firstMessage?.Content[0]?.ExpectedResponse === CpdlcMessageExpectedResponseType.Roger,
+    );
 
     this.isOutputButtonsVisible.set(
       !answerReq &&
@@ -164,7 +184,7 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
       case MailboxStatusMessage.CommunicationNotAvailable:
         return 'ATC DLK NOT AVAIL';
       case MailboxStatusMessage.CommunicationNotInitialized:
-        return ''; // not on A380
+        return 'COM NOT INIT'; // not in FCOM but seen during mailbox startup
       case MailboxStatusMessage.MaximumDownlinkMessages:
         return 'FILE FULL';
       case MailboxStatusMessage.LinkLost:
@@ -446,6 +466,7 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
         this.messageReadComplete.set(true);
         this.visibleMessageStatus.set(MailboxStatusMessage.NoMessage);
         this.visibleMessageSemanticResponseIncomplete.set(false);
+        this.answerRequired.set(false);
         return;
       }
 
@@ -538,7 +559,7 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
           });
         }),
 
-      this.visibleMessages.sub(() => this.updateButtonVisibility(), true),
+      this.visibleMessage.sub(() => this.updateButtonVisibility(), true),
       this.answerRequired.sub(() => this.updateButtonVisibility(), true),
       this.visibleMessagesStatusText,
       this.systemStatusMessageText,
@@ -633,14 +654,6 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
           </div>
         </div>
         <div class="atc-mailbox-right-layout">
-          <ButtonsOutput
-            message={this.visibleMessage}
-            reachedEndOfMessage={this.messageReadComplete}
-            sendMessage={this.sendMessage}
-            deleteMessage={this.deleteMessage}
-            closeMessage={this.closeMessage}
-            visible={this.isOutputButtonsVisible}
-          />
           <ButtonsWilcoUnable
             message={this.visibleMessage}
             reachedEndOfMessage={this.messageReadComplete}
@@ -651,6 +664,36 @@ export class AtcMailbox extends DisplayComponent<AtcMailboxProps> {
             monitorMessage={this.monitorMessage}
             cancelMessageMonitoring={this.stopMessageMonitoring}
             visible={this.isWilcoUnableButtonsVisible}
+          />
+          <ButtonsAffirmNegative
+            message={this.visibleMessage}
+            reachedEndOfMessage={this.messageReadComplete}
+            selectedResponse={this.selectedResponse}
+            setMessageStatus={this.setMessageStatus}
+            sendResponse={this.sendResponse}
+            closeMessage={this.closeMessage}
+            monitorMessage={this.monitorMessage}
+            cancelMessageMonitoring={this.stopMessageMonitoring}
+            visible={this.isAffirmNegativeButtonsVisible}
+          />
+          <ButtonsRoger
+            message={this.visibleMessage}
+            reachedEndOfMessage={this.messageReadComplete}
+            selectedResponse={this.selectedResponse}
+            setMessageStatus={this.setMessageStatus}
+            sendResponse={this.sendResponse}
+            closeMessage={this.closeMessage}
+            monitorMessage={this.monitorMessage}
+            cancelMessageMonitoring={this.stopMessageMonitoring}
+            visible={this.isRogerButtonsVisible}
+          />
+          <ButtonsOutput
+            message={this.visibleMessage}
+            reachedEndOfMessage={this.messageReadComplete}
+            sendMessage={this.sendMessage}
+            deleteMessage={this.deleteMessage}
+            closeMessage={this.closeMessage}
+            visible={this.isOutputButtonsVisible}
           />
           <ButtonsClose
             message={this.visibleMessage}
