@@ -1254,6 +1254,27 @@ export class ShortAlphanumericFormat implements DataEntryFormat<string> {
   }
 }
 
+export class GateFormat implements DataEntryFormat<string> {
+  public placeholder = '';
+
+  public maxDigits = 5;
+
+  public format(value: string) {
+    if (!value) {
+      return [this.placeholder, null, null] as FieldFormatTuple;
+    }
+    return [value, null, null] as FieldFormatTuple;
+  }
+
+  public async parse(input: string) {
+    if (input === '' || input === this.placeholder) {
+      return null;
+    }
+
+    return input;
+  }
+}
+
 export class AircraftType implements DataEntryFormat<string> {
   public placeholder = '----';
 
