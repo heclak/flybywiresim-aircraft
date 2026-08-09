@@ -4,8 +4,8 @@ import {
   AircraftType,
   AirportFormat,
   AtisCode,
+  GateFormat,
   LongAlphanumericFormat,
-  ShortAlphanumericFormat,
 } from '../../../common/DataEntryFormats';
 import { IconButton } from '../../../../../MsfsAvionicsCommon/UiWidgets/IconButton';
 import { MessageVisualizationProps } from '../Registry';
@@ -43,11 +43,11 @@ export class RequestDepartureClearance extends DisplayComponent<MessageVisualiza
   }
 
   private readonly originAirport = Subject.create<string>(this.props.atcService.getFmsOrigin());
-  private readonly gate = Subject.create<string>('');
-  private readonly atisCode = Subject.create<string>('');
+  private readonly gate = Subject.create<string>(null);
+  private readonly atisCode = Subject.create<string>(null);
   private readonly aircraftType = Subject.create<string>('A388');
   private readonly destAirport = Subject.create<string>(this.props.atcService.getFmsDestination());
-  private readonly freeText = Subject.create<string>('');
+  private readonly freeText = Subject.create<string>(null);
 
   private dataBlock = this.CreateDataBlock();
 
@@ -141,6 +141,7 @@ export class RequestDepartureClearance extends DisplayComponent<MessageVisualiza
             <InputField<string>
               dataEntryFormat={new AirportFormat()}
               value={this.originAirport}
+              mandatory={Subject.create(true)}
               containerStyle="width: 120px; margin-right: 5px;"
               alignText="center"
               errorHandler={(e) => this.props.atcService.showAtcErrorMessage(e.type, e.details)}
@@ -151,7 +152,7 @@ export class RequestDepartureClearance extends DisplayComponent<MessageVisualiza
           <div class="request-block-line">
             <div class="mfd-label request-block-input-label">GATE</div>
             <InputField<string>
-              dataEntryFormat={new ShortAlphanumericFormat()}
+              dataEntryFormat={new GateFormat()}
               value={this.gate}
               containerStyle="width: 120px; margin-right: 5px;"
               alignText="center"
@@ -165,6 +166,7 @@ export class RequestDepartureClearance extends DisplayComponent<MessageVisualiza
             <InputField<string>
               dataEntryFormat={new AtisCode()}
               value={this.atisCode}
+              mandatory={Subject.create(true)}
               containerStyle="width: 120px; margin-right: 5px;"
               alignText="center"
               errorHandler={(e) => this.props.atcService.showAtcErrorMessage(e.type, e.details)}
@@ -191,6 +193,7 @@ export class RequestDepartureClearance extends DisplayComponent<MessageVisualiza
             <InputField<string>
               dataEntryFormat={new AirportFormat()}
               value={this.destAirport}
+              mandatory={Subject.create(true)}
               containerStyle="width: 120px; margin-right: 5px;"
               alignText="center"
               errorHandler={(e) => this.props.atcService.showAtcErrorMessage(e.type, e.details)}
