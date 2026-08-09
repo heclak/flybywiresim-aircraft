@@ -17,6 +17,10 @@ export class MfdAtccomMsgRecordAll extends DisplayComponent<MfdAtccomMsgRecordAl
 
   private readonly msgListRef = FSComponent.createRef<HTMLDivElement>();
 
+  private noMsgClass = this.messages.map((messages) => {
+    return messages.length > 0 ? 'hidden' : 'msg-record-empty';
+  });
+
   protected onNewData() {}
 
   private renderMessages(): void {
@@ -53,35 +57,7 @@ export class MfdAtccomMsgRecordAll extends DisplayComponent<MfdAtccomMsgRecordAl
         <div class="mfd-page-container">
           <div style="display:flex; flex: 1 1 auto; width:100%">
             <div ref={this.msgListRef} id="msg-record-list">
-              {/* <MessageElement
-                msgTime="1323Z"
-                msgOriginDest="LFBO"
-                msgStatus="UNABLE"
-                msgBody="MAINTAIN M.77"
-                onClick={() => {
-                  this.props.mfd.uiService.navigateTo('atccom/msg-record/all-msg-expand');
-                }}
-              />
-              <MessageElement
-                msgTime="1320Z"
-                msgOriginDest="LFDG"
-                msgStatus="WILCO"
-                msgBody='AT <span class="msg-highlight-magenta">1400Z</span> CLB TO FL350'
-                onClick={() => {
-                  this.props.mfd.uiService.navigateTo('atccom/msg-record/all-msg-expand');
-                }}
-              />
-              <MessageElement
-                msgTime="1319Z"
-                msgOriginDest="LFDG"
-                msgStatus="WILCO"
-                msgBody='AT <span class="msg-highlight-magenta">AAA/180&deg;/512KILOMETER</span> OFFSET 64NM LEFT OF ROUTE'
-                onClick={() => {
-                  this.props.mfd.uiService.navigateTo('atccom/msg-record/all-msg-expand');
-                }}
-              /> */}
-              {/* <div style="flex-grow: 1;" /> */}
-              {/* fill space vertically */}
+              <div class={this.noMsgClass}>NO STORED MSG</div>
             </div>
             <div id="msg-record-scrollbar"></div>
             <MessageRecordNav />
@@ -95,22 +71,6 @@ export class MfdAtccomMsgRecordAll extends DisplayComponent<MfdAtccomMsgRecordAl
             </div>
           </div>
         </div>
-        {/* <div
-          id="atccom-inop"
-          style="
-    position: absolute;
-    top: 132px;
-    width: 768px;
-    height: 818px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 35px;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: #e68000"
-        >
-          <span>NOT YET IMPLEMENTED</span>
-        </div> */}
         <AtccomFooter bus={this.props.bus} mfd={this.props.mfd} atcService={this.props.atcService} />
       </>
     );
