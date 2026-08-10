@@ -3,6 +3,7 @@
 
 import { CpdlcMessage } from './CpdlcMessage';
 import { AtsuMessageType, AtsuMessageDirection, AtsuMessageSerializationFormat, AtsuMessage } from './AtsuMessage';
+import { AircraftType, SerializationOptions } from '../components/SerializationConfig';
 
 /**
  * Defines the general DCL message format
@@ -29,7 +30,11 @@ export class DclMessage extends CpdlcMessage {
     this.CloseAutomatically = false;
   }
 
-  public serialize(format: AtsuMessageSerializationFormat) {
+  public serialize(options: AtsuMessageSerializationFormat | SerializationOptions) {
+    const opts: SerializationOptions = typeof options === 'object' ? options : { format: options };
+    const format = opts.format;
+    const aircraft = opts.aircraftType ?? AircraftType.A320;
+
     let dclMessage = '';
     if (format === AtsuMessageSerializationFormat.Network) {
       dclMessage = 'REQUEST PREDEP CLEARANCE \n';
@@ -37,7 +42,7 @@ export class DclMessage extends CpdlcMessage {
       dclMessage += `AT ${this.Origin}${this.Gate !== '' ? ` STAND ${this.Gate}` : ''} \n`;
       dclMessage += `ATIS ${this.Atis}`;
     } else {
-      if (format !== AtsuMessageSerializationFormat.Mailbox) {
+      if (format !== AtsuMessageSerializationFormat.Mailbox && aircraft === AircraftType.A320) {
         dclMessage = `${this.Timestamp.mailboxTimestamp()} TO ${this.Station}\n`;
       }
 

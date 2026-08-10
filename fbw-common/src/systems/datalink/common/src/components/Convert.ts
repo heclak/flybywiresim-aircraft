@@ -13,7 +13,7 @@ export function wordWrap(text: string, maxLength: number) {
       continue;
     }
 
-    if (length + word.length >= maxLength) {
+    if (length + word.length > maxLength && line.length > 0) {
       result.push(line.join(' ').toUpperCase());
       line = [];
       length = 0;

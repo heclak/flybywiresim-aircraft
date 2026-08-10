@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 import {
+  AircraftType,
   AtsuMessageComStatus,
   AtsuMessageDirection,
   AtsuMessageSerializationFormat,
@@ -196,7 +197,10 @@ export class MailboxMessage extends DisplayComponent<MailboxMessageProps> {
       const message = this.props.messages.tryGet(0);
 
       if (message) {
-        const rawText = message.serialize(AtsuMessageSerializationFormat.Mailbox);
+        const rawText = message.serialize({
+          format: AtsuMessageSerializationFormat.Mailbox,
+          aircraftType: AircraftType.A380,
+        });
         const pageIndex = Math.max(0, this.props.pageIndex.get());
 
         const lines = this.parseAndWrapMessage(rawText, 24);

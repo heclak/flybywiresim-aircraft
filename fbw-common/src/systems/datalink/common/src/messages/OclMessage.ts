@@ -3,6 +3,7 @@
 
 import { CpdlcMessage } from './CpdlcMessage';
 import { AtsuMessageType, AtsuMessageDirection, AtsuMessageSerializationFormat, AtsuMessage } from './AtsuMessage';
+import { SerializationOptions } from '../components/SerializationConfig';
 
 /**
  * Defines the general OCL message format
@@ -29,7 +30,10 @@ export class OclMessage extends CpdlcMessage {
     this.CloseAutomatically = false;
   }
 
-  public serialize(format: AtsuMessageSerializationFormat) {
+  public serialize(options: AtsuMessageSerializationFormat | SerializationOptions) {
+    const opts: SerializationOptions = typeof options === 'object' ? options : { format: options };
+    const format = opts.format;
+
     let oclMessage = `OCEANIC REQUEST\n${this.Callsign} \n`;
     oclMessage += `ENTRY POINT:${this.EntryPoint}\nAT:${this.EntryTime} \n`;
     oclMessage += `REQ:${this.RequestedMach} ${this.RequestedFlightlevel}`;
