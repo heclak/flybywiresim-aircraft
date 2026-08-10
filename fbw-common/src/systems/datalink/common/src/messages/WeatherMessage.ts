@@ -4,6 +4,7 @@
 
 import { AtsuMessageType, AtsuMessageDirection, AtsuMessageSerializationFormat, AtsuMessage } from './AtsuMessage';
 import { wordWrap } from '../components/Convert';
+import { AircraftType, SerializationLineLengthConfig, SerializationOptions } from '../components/SerializationConfig';
 
 /**
  * Defines the general weather message format
@@ -16,7 +17,15 @@ export class WeatherMessage extends AtsuMessage {
     this.Direction = AtsuMessageDirection.Uplink;
   }
 
-  public serialize(format: AtsuMessageSerializationFormat) {
+  public serialize(options: AtsuMessageSerializationFormat | SerializationOptions) {
+    const opts: SerializationOptions = typeof options === 'object' ? options : { format: options };
+    const format = opts.format;
+    const aircraft = opts.aircraftType ?? AircraftType.A320;
+    const config = SerializationLineLengthConfig[aircraft];
+
+    const lineLength =
+      opts.customLineLength ?? (format === AtsuMessageSerializationFormat.Mailbox ? config.mailbox : config.display);
+
     let type = '';
     switch (this.Type) {
       case AtsuMessageType.METAR:
@@ -40,7 +49,7 @@ export class WeatherMessage extends AtsuMessage {
         message += `{cyan}${type} ${report.airport}{end}\n`;
 
         // eslint-disable-next-line no-loop-func
-        wordWrap(report.report, 25).forEach((line) => {
+        wordWrap(report.report, lineLength).forEach((line) => {
           if (line.startsWith('D-ATIS')) {
             message += `{amber}${line}{end}\n`;
           } else if (line === 'NO METAR AVAILABLE' || line === 'NO TAF AVAILABLE') {

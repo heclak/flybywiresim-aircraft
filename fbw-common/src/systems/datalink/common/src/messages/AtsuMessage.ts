@@ -2,6 +2,7 @@
 //  Copyright (c) 2022 FlyByWire Simulations
 //  SPDX-License-Identifier: GPL-3.0
 
+import { SerializationOptions } from '../components/SerializationConfig';
 import { AtsuTimestamp } from './AtsuTimestamp';
 
 export enum AtsuMessageNetwork {
@@ -66,7 +67,7 @@ export class AtsuMessage {
 
   public Message = '';
 
-  public serialize(_format: AtsuMessageSerializationFormat): string {
+  public serialize(_options: AtsuMessageSerializationFormat | SerializationOptions): string {
     throw new Error('No valid implementation');
   }
 

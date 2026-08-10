@@ -1,4 +1,5 @@
 import {
+  AircraftType,
   AtsuMessageDirection,
   AtsuMessageSerializationFormat,
   CpdlcMessage,
@@ -88,7 +89,12 @@ export class MessageElement extends DisplayComponent<MessageElementProps> {
   onAfterRender(node: VNode): void {
     super.onAfterRender(node);
     this.divRef.instance.addEventListener('click', this.onClickHandler);
-    this.formatMessageRecord(this.props.message.serialize(AtsuMessageSerializationFormat.FmsDisplay));
+    this.formatMessageRecord(
+      this.props.message.serialize({
+        format: AtsuMessageSerializationFormat.FmsDisplay,
+        aircraftType: AircraftType.A380,
+      }),
+    );
   }
 
   render(): VNode {

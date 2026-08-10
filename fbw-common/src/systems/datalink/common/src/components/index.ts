@@ -7,3 +7,4 @@ export * from './InputValidationFansA';
 export * from './InputValidationFansB';
 export * from './UplinkMessageInterpretation';
 export * from './UplinkMonitor';
+export * from './SerializationConfig';

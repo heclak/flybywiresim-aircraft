@@ -12,6 +12,7 @@ import {
 } from './AtsuMessage';
 import { CpdlcMessageElement, CpdlcMessagesDownlink, CpdlcMessagesUplink } from './CpdlcMessageElements';
 import { wordWrap } from '../components/Convert';
+import { AircraftType, SerializationLineLengthConfig, SerializationOptions } from '../components/SerializationConfig';
 
 export enum CpdlcMessageMonitoringState {
   Ignored = 0,
@@ -130,8 +131,18 @@ export class CpdlcMessage extends AtsuMessage {
     );
   }
 
-  public serialize(format: AtsuMessageSerializationFormat) {
-    const lineLength = format === AtsuMessageSerializationFormat.Mailbox ? 30 : 25;
+  public serialize(options: AtsuMessageSerializationFormat | SerializationOptions) {
+    const opts: SerializationOptions = typeof options === 'object' ? options : { format: options };
+
+    const format = opts.format;
+    const aircraft = opts.aircraftType ?? AircraftType.A320;
+    const config = SerializationLineLengthConfig[aircraft];
+
+    const lineLength =
+      opts.customLineLength ?? (format === AtsuMessageSerializationFormat.Mailbox ? config.mailbox : config.display);
+
+    const separator = '-'.repeat(lineLength);
+
     const lines: string[] = [];
     let message: string = '';
 
@@ -164,9 +175,9 @@ export class CpdlcMessage extends AtsuMessage {
       format === AtsuMessageSerializationFormat.FmsDisplay ||
       format === AtsuMessageSerializationFormat.FmsDisplayMonitored
     ) {
-      if (this.Direction === AtsuMessageDirection.Uplink) {
+      if (this.Direction === AtsuMessageDirection.Uplink && aircraft === AircraftType.A320) {
         message += `{cyan}${this.Timestamp.mailboxTimestamp()} FROM ${this.Station}{end}\n`;
-      } else {
+      } else if (aircraft === AircraftType.A320) {
         message += `{cyan}${this.Timestamp.mailboxTimestamp()} TO ${this.Station}{end}\n`;
       }
 
@@ -179,7 +190,7 @@ export class CpdlcMessage extends AtsuMessage {
         }
       });
 
-      message += '{white}------------------------{end}\n';
+      message += `{white}${separator}{end}\n`;
 
       if (this.extendSerializationWithResponse()) {
         message += this.Response.serialize(format);
@@ -192,7 +203,7 @@ export class CpdlcMessage extends AtsuMessage {
         message += `${line}\n`;
       });
 
-      message += '------------------------\n';
+      message += `${separator}\n`;
 
       if (this.extendSerializationWithResponse()) {
         message += this.Response.serialize(format);
