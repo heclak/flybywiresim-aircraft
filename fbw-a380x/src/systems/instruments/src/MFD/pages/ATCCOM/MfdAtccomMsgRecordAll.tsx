@@ -21,6 +21,10 @@ export class MfdAtccomMsgRecordAll extends DisplayComponent<MfdAtccomMsgRecordAl
     return messages.length > 0 ? 'hidden' : 'msg-record-empty';
   });
 
+  private scrollbarClasses = this.messages.map((messages) => {
+    return messages.length === 0 ? 'hidden' : '';
+  });
+
   protected onNewData() {}
 
   private renderMessages(): void {
@@ -59,8 +63,8 @@ export class MfdAtccomMsgRecordAll extends DisplayComponent<MfdAtccomMsgRecordAl
             <div ref={this.msgListRef} id="msg-record-list">
               <div class={this.noMsgClass}>NO STORED MSG</div>
             </div>
-            <div id="msg-record-scrollbar"></div>
-            <MessageRecordNav />
+            <div id="msg-record-scrollbar" class={this.scrollbarClasses}></div>
+            <MessageRecordNav class={this.scrollbarClasses} />
           </div>
           <div class="mfd-atccom-msg-record-footer">
             <div>
