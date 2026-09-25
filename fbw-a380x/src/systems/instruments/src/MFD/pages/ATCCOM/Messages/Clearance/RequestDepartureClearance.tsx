@@ -154,6 +154,7 @@ export class RequestDepartureClearance extends DisplayComponent<MessageVisualiza
             <InputField<string>
               dataEntryFormat={new GateFormat()}
               value={this.gate}
+              mandatory={Subject.create(false)}
               containerStyle="width: 120px; margin-right: 5px;"
               alignText="center"
               errorHandler={(e) => this.props.atcService.showAtcErrorMessage(e.type, e.details)}

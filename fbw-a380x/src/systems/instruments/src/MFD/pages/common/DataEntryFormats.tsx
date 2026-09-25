@@ -1255,7 +1255,7 @@ export class ShortAlphanumericFormat implements DataEntryFormat<string> {
 }
 
 export class GateFormat implements DataEntryFormat<string> {
-  public placeholder = '';
+  public placeholder = '\u00A0';
 
   public maxDigits = 5;
 
